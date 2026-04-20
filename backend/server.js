@@ -2,7 +2,7 @@
  * CampusEcho - Smart Campus Query Management System
  * Main Server Entry Point
  */
-
+const API_BASE = 'https://campusecho-w36x.onrender.com/api';
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');

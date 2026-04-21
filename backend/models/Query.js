@@ -62,6 +62,17 @@ const querySchema = new mongoose.Schema({
     default: ''
   },
 
+  // Comments / follow-up thread
+  comments: [
+    {
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      userName: { type: String, required: true },
+      role: { type: String, enum: ['student', 'admin'], default: 'student' },
+      text: { type: String, required: true, trim: true, maxlength: 500 },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
+
   // Timestamps
   createdAt: {
     type: Date,

@@ -13,8 +13,7 @@
 // ========================
 // CONFIG
 // ========================
-//const API_BASE = '/api'; 
-const API_BASE = 'https://campusecho-w36x.onrender.com/api';
+const API_BASE = '/api'; // Change to 'http://localhost:5000/api' if serving separately
 let currentUser = null;
 let adminSearchTimeout = null;
 
@@ -274,6 +273,7 @@ function showSection(name, clickedEl) {
     overview: ['Overview', 'Your query dashboard'],
     submit: ['New Query', 'Submit a campus query'],
     myqueries: ['My Queries', 'Track your submitted queries'],
+    profile: ['My Profile', 'Edit your account details'],
     admin: ['Admin Panel', 'Manage all campus queries']
   };
   if (titles[name]) {
@@ -284,6 +284,7 @@ function showSection(name, clickedEl) {
   // Load section-specific data
   if (name === 'admin') fetchAdminQueries();
   if (name === 'myqueries') fetchQueries();
+  if (name === 'profile') loadProfileForm();
 
   // Close sidebar on mobile
   document.getElementById('sidebar').classList.remove('open');
@@ -337,10 +338,12 @@ async function submitQuery(event) {
 async function fetchQueries() {
   const status = document.getElementById('filter-status')?.value || '';
   const category = document.getElementById('filter-category')?.value || '';
+  const search = document.getElementById('search-queries')?.value || '';
 
   const params = new URLSearchParams();
   if (status) params.append('status', status);
   if (category) params.append('category', category);
+  if (search) params.append('search', search);
 
   const queriesListEl = document.getElementById('queries-list');
   if (queriesListEl) {
@@ -437,12 +440,16 @@ function renderRecentQueries(queries) {
 // MODAL: OPEN QUERY DETAIL
 // ========================
 let queriesCache = {};
+let currentQueryId = null;
 
 async function openQueryModal(queryId) {
   const modal = document.getElementById('query-modal');
   const content = document.getElementById('modal-content');
+  const commentsSection = document.getElementById('comments-section');
   modal.classList.remove('hidden');
+  currentQueryId = queryId;
   content.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><span>Loading...</span></div>';
+  commentsSection.classList.add('hidden');
 
   try {
     const data = await apiCall(`/queries/${queryId}`);
@@ -457,22 +464,10 @@ async function openQueryModal(queryId) {
       </div>
       <div class="modal-desc">${escHtml(q.description)}</div>
       <div class="modal-info">
-        <div class="modal-info-item">
-          <label>Submitted</label>
-          <span>${formatDate(q.createdAt)}</span>
-        </div>
-        <div class="modal-info-item">
-          <label>Last Updated</label>
-          <span>${formatDate(q.updatedAt)}</span>
-        </div>
-        <div class="modal-info-item">
-          <label>Category</label>
-          <span>${q.category}</span>
-        </div>
-        <div class="modal-info-item">
-          <label>Query ID</label>
-          <span style="font-family:var(--font-mono);font-size:11px">${q._id}</span>
-        </div>
+        <div class="modal-info-item"><label>Submitted</label><span>${formatDate(q.createdAt)}</span></div>
+        <div class="modal-info-item"><label>Last Updated</label><span>${formatDate(q.updatedAt)}</span></div>
+        <div class="modal-info-item"><label>Category</label><span>${q.category}</span></div>
+        <div class="modal-info-item"><label>Query ID</label><span style="font-family:var(--font-mono);font-size:11px">${q._id}</span></div>
       </div>
       ${q.adminResponse ? `
         <div class="modal-response">
@@ -484,6 +479,14 @@ async function openQueryModal(queryId) {
           <div class="modal-response-text">Our team will respond to your query shortly.</div>
         </div>`}
     `;
+
+    // Store query data for PDF
+    queriesCache[queryId] = q;
+
+    // Show comments section
+    commentsSection.classList.remove('hidden');
+    renderComments(q.comments || [], queryId);
+
   } catch (err) {
     content.innerHTML = `<div class="empty-state">Error loading query details.</div>`;
   }
@@ -493,6 +496,106 @@ function closeModal(event) {
   if (event.target === document.getElementById('query-modal')) {
     document.getElementById('query-modal').classList.add('hidden');
   }
+}
+
+// ========================
+// COMMENTS: RENDER
+// ========================
+function renderComments(comments, queryId) {
+  const list = document.getElementById('comments-list');
+  if (comments.length === 0) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px">No comments yet. Ask a follow-up question!</div>';
+    return;
+  }
+  list.innerHTML = comments.map(c => `
+    <div class="comment-bubble ${c.role}">
+      <div class="comment-meta">
+        <span class="comment-name">${escHtml(c.userName)}</span>
+        <span>${c.role === 'admin' ? '🛡 Admin' : '🎓 Student'}</span>
+        <span>${formatDate(c.createdAt)}</span>
+        ${c.userId === currentUser?.id ? `<button class="comment-delete" onclick="deleteComment('${queryId}','${c._id}')">✕</button>` : ''}
+      </div>
+      <div>${escHtml(c.text)}</div>
+    </div>
+  `).join('');
+}
+
+// ========================
+// COMMENTS: ADD
+// ========================
+async function addComment(event) {
+  event.preventDefault();
+  const input = document.getElementById('comment-input');
+  const text = input.value.trim();
+  if (!text || !currentQueryId) return;
+
+  try {
+    await apiCall(`/queries/${currentQueryId}/comments`, 'POST', { text });
+    input.value = '';
+    // Refresh modal
+    const data = await apiCall(`/queries/${currentQueryId}`);
+    renderComments(data.query.comments || [], currentQueryId);
+    queriesCache[currentQueryId] = data.query;
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ========================
+// COMMENTS: DELETE
+// ========================
+async function deleteComment(queryId, commentId) {
+  try {
+    await apiCall(`/queries/${queryId}/comments/${commentId}`, 'DELETE');
+    const data = await apiCall(`/queries/${queryId}`);
+    renderComments(data.query.comments || [], queryId);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ========================
+// PDF: DOWNLOAD QUERY
+// ========================
+function downloadQueryPDF() {
+  if (!currentQueryId || !queriesCache[currentQueryId]) {
+    showToast('No query selected', 'error');
+    return;
+  }
+  const q = queriesCache[currentQueryId];
+
+  const content = `
+CampusEcho — Query Report
+=========================
+
+Title       : ${q.title}
+Category    : ${q.category}
+Priority    : ${q.priority}
+Status      : ${q.status}
+Submitted   : ${formatDate(q.createdAt)}
+Last Updated: ${formatDate(q.updatedAt)}
+Query ID    : ${q._id}
+
+Description
+-----------
+${q.description}
+
+${q.adminResponse ? `Staff Response\n--------------\n${q.adminResponse}` : 'Staff Response: Awaiting response'}
+
+${q.comments && q.comments.length > 0 ? `\nComments\n--------\n${q.comments.map(c => `[${c.role.toUpperCase()}] ${c.userName} (${formatDate(c.createdAt)})\n${c.text}`).join('\n\n')}` : ''}
+
+---
+Generated by CampusEcho on ${new Date().toLocaleString('en-IN')}
+  `.trim();
+
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `query-${q._id.slice(-6)}-${q.title.slice(0,20).replace(/\s+/g,'-')}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Query downloaded!', 'success');
 }
 
 // ========================

@@ -74,12 +74,21 @@ router.post('/queries', authMiddleware, async (req, res) => {
  */
 router.get('/queries', authMiddleware, async (req, res) => {
   try {
-    const { status, category, sort } = req.query;
+    const { status, category, sort, search } = req.query;
 
     // Build filter — students only see their own queries
     const filter = { userId: req.userId };
     if (status) filter.status = status;
     if (category) filter.category = category;
+
+    // Search across title and description
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } }
+      ];
+    }
 
     // Sorting
     const sortOrder = sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
@@ -89,11 +98,12 @@ router.get('/queries', authMiddleware, async (req, res) => {
       .populate('userId', 'name email department');
 
     // Stats summary
+    const allUserQueries = await Query.find({ userId: req.userId });
     const stats = {
-      total: queries.length,
-      pending: queries.filter(q => q.status === 'Pending').length,
-      inProgress: queries.filter(q => q.status === 'In Progress').length,
-      resolved: queries.filter(q => q.status === 'Resolved').length,
+      total: allUserQueries.length,
+      pending: allUserQueries.filter(q => q.status === 'Pending').length,
+      inProgress: allUserQueries.filter(q => q.status === 'In Progress').length,
+      resolved: allUserQueries.filter(q => q.status === 'Resolved').length,
     };
 
     res.json({ queries, stats });
@@ -193,6 +203,73 @@ router.delete('/queries/:id', authMiddleware, async (req, res) => {
 
   } catch (err) {
     console.error('Delete query error:', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+// ========================
+// ADD COMMENT TO QUERY (Protected)
+// ========================
+/**
+ * POST /api/queries/:id/comments
+ * Body: { text }
+ */
+router.post('/queries/:id/comments', authMiddleware, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || text.trim().length < 1) {
+      return res.status(400).json({ error: 'Comment text is required.' });
+    }
+    if (text.length > 500) {
+      return res.status(400).json({ error: 'Comment cannot exceed 500 characters.' });
+    }
+
+    const query = await Query.findById(req.params.id);
+    if (!query) return res.status(404).json({ error: 'Query not found.' });
+
+    // Only allow owner or admin to comment
+    if (query.userId.toString() !== req.userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+
+    query.comments.push({
+      userId: req.userId,
+      userName: req.user.name,
+      role: req.user.role,
+      text: text.trim()
+    });
+
+    await query.save();
+    res.status(201).json({
+      message: 'Comment added.',
+      comment: query.comments[query.comments.length - 1]
+    });
+  } catch (err) {
+    console.error('Add comment error:', err);
+    res.status(500).json({ error: 'Server error while adding comment.' });
+  }
+});
+
+// ========================
+// DELETE COMMENT (Protected — owner of comment only)
+// ========================
+router.delete('/queries/:id/comments/:commentId', authMiddleware, async (req, res) => {
+  try {
+    const query = await Query.findById(req.params.id);
+    if (!query) return res.status(404).json({ error: 'Query not found.' });
+
+    const comment = query.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found.' });
+
+    if (comment.userId.toString() !== req.userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'You can only delete your own comments.' });
+    }
+
+    comment.deleteOne();
+    await query.save();
+    res.json({ message: 'Comment deleted.' });
+  } catch (err) {
+    console.error('Delete comment error:', err);
     res.status(500).json({ error: 'Server error.' });
   }
 });

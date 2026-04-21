@@ -35,7 +35,6 @@ router.post('/register', async (req, res) => {
 
     // --- Admin secret code validation ---
     const ADMIN_SECRET = process.env.ADMIN_SECRET || 'campus@admin2025';
-    //const ADMIN_SECRET = process.env.ADMIN_SECRET || 'campus@admin2025';
     if (role === 'admin') {
       if (!adminCode) {
         return res.status(403).json({ error: 'Admin secret code is required to register as admin.' });
@@ -153,12 +152,84 @@ router.post('/login', async (req, res) => {
 // ========================
 // GET CURRENT USER
 // ========================
-/**
- * GET /api/auth/me
- * Headers: Authorization: Bearer <token>
- */
 router.get('/me', authMiddleware, async (req, res) => {
   res.json({ user: req.user });
+});
+
+// ========================
+// EDIT PROFILE
+// ========================
+/**
+ * PUT /api/auth/profile
+ * Body: { name, department, currentPassword?, newPassword? }
+ */
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { name, department, currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Update name and department
+    if (name && name.trim().length >= 2) user.name = name.trim();
+    if (department !== undefined) user.department = department.trim() || 'General';
+
+    // Change password if requested
+    if (currentPassword && newPassword) {
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) return res.status(400).json({ error: 'Current password is incorrect.' });
+      if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+      user.password = newPassword; // hashed by pre-save hook
+    }
+
+    await user.save();
+
+    res.json({
+      message: 'Profile updated successfully.',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department
+      }
+    });
+  } catch (err) {
+    console.error('Edit profile error:', err);
+    res.status(500).json({ error: 'Server error while updating profile.' });
+  }
+});
+
+// ========================
+// DELETE ACCOUNT
+// ========================
+/**
+ * DELETE /api/auth/account
+ * Body: { password } — user must confirm with password
+ */
+router.delete('/account', authMiddleware, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: 'Password is required to delete account.' });
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Verify password before deleting
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) return res.status(401).json({ error: 'Incorrect password.' });
+
+    // Delete all queries belonging to this user
+    const Query = require('../models/Query');
+    await Query.deleteMany({ userId: req.userId });
+
+    // Delete user account
+    await User.findByIdAndDelete(req.userId);
+
+    res.json({ message: 'Account and all associated queries deleted successfully.' });
+  } catch (err) {
+    console.error('Delete account error:', err);
+    res.status(500).json({ error: 'Server error while deleting account.' });
+  }
 });
 
 module.exports = router;

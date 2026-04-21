@@ -165,6 +165,10 @@
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
           <span>My Queries</span>
         </a>
+        <a href="#" class="nav-item" onclick="showSection('profile', this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+          <span>My Profile</span>
+        </a>
         <a href="#" class="nav-item" id="admin-nav-item" style="display:none" onclick="showSection('admin', this)">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
           <span>Admin Panel</span>
@@ -347,8 +351,11 @@
       <!-- ---- MY QUERIES SECTION ---- -->
       <section id="section-myqueries" class="content-section hidden">
         <div class="queries-toolbar">
+          <div class="filter-group search-filter">
+            <input type="text" id="search-queries" placeholder="🔍 Search queries..." oninput="debounceSearch()" />
+          </div>
           <div class="filter-group">
-            <label>Filter by Status:</label>
+            <label>Status:</label>
             <select id="filter-status" onchange="fetchQueries()">
               <option value="">All Statuses</option>
               <option>Pending</option>
@@ -413,14 +420,124 @@
           <div class="loading-spinner"><div class="spinner"></div><span>Loading all queries...</span></div>
         </div>
       </section>
+      <!-- ---- PROFILE SECTION ---- -->
+      <section id="section-profile" class="content-section hidden">
+        <div class="profile-grid">
+
+          <!-- Edit Profile Card -->
+          <div class="form-card">
+            <div class="form-card-header">
+              <h3>Edit Profile</h3>
+              <p>Update your personal information</p>
+            </div>
+            <form id="profile-form" onsubmit="updateProfile(event)" style="padding:24px 28px;display:flex;flex-direction:column;gap:16px;">
+              <div class="form-group">
+                <label>Full Name</label>
+                <div class="input-wrapper">
+                  <input type="text" id="profile-name" placeholder="Your full name" required minlength="2" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Department</label>
+                <div class="input-wrapper">
+                  <input type="text" id="profile-dept" placeholder="e.g. Computer Science" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Email Address</label>
+                <div class="input-wrapper">
+                  <input type="email" id="profile-email" disabled style="opacity:0.5;cursor:not-allowed;" />
+                </div>
+                <span style="font-size:11px;color:var(--text-muted)">Email cannot be changed</span>
+              </div>
+              <div id="profile-error" class="form-error hidden"></div>
+              <div id="profile-success" class="form-success hidden"></div>
+              <button type="submit" class="btn-primary" id="profile-btn">
+                <span>Save Changes</span>
+              </button>
+            </form>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <!-- Change Password Card -->
+            <div class="form-card">
+              <div class="form-card-header">
+                <h3>Change Password</h3>
+                <p>Update your login password</p>
+              </div>
+              <form id="password-form" onsubmit="changePassword(event)" style="padding:24px 28px;display:flex;flex-direction:column;gap:16px;">
+                <div class="form-group">
+                  <label>Current Password</label>
+                  <div class="input-wrapper">
+                    <input type="password" id="current-password" placeholder="Enter current password" required />
+                    <button type="button" class="toggle-pw" onclick="togglePassword('current-password', this)">Show</button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>New Password</label>
+                  <div class="input-wrapper">
+                    <input type="password" id="new-password" placeholder="Min. 6 characters" required minlength="6" />
+                    <button type="button" class="toggle-pw" onclick="togglePassword('new-password', this)">Show</button>
+                  </div>
+                </div>
+                <div id="password-error" class="form-error hidden"></div>
+                <div id="password-success" class="form-success hidden"></div>
+                <button type="submit" class="btn-primary" id="password-btn">
+                  <span>Update Password</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Delete Account Card -->
+            <div class="form-card" style="border-color:rgba(244,63,94,0.2);">
+              <div class="form-card-header" style="background:rgba(244,63,94,0.05);">
+                <h3 style="color:var(--rose-400)">⚠️ Delete Account</h3>
+                <p>Permanently delete your account and all queries. This cannot be undone.</p>
+              </div>
+              <form id="delete-form" onsubmit="deleteAccount(event)" style="padding:24px 28px;display:flex;flex-direction:column;gap:16px;">
+                <div class="form-group">
+                  <label>Confirm Password</label>
+                  <div class="input-wrapper">
+                    <input type="password" id="delete-password" placeholder="Enter your password to confirm" required />
+                  </div>
+                </div>
+                <div id="delete-error" class="form-error hidden"></div>
+                <button type="submit" class="btn-primary" id="delete-btn" style="background:linear-gradient(135deg,var(--rose-500),var(--rose-400));box-shadow:0 4px 16px rgba(244,63,94,0.3);">
+                  <span>Delete My Account</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
   <!-- ===================== QUERY DETAIL MODAL ===================== -->
   <div id="query-modal" class="modal-overlay hidden" onclick="closeModal(event)">
     <div class="modal-box">
-      <button class="modal-close" onclick="document.getElementById('query-modal').classList.add('hidden')">✕</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <span></span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-ghost" id="download-pdf-btn" onclick="downloadQueryPDF()" style="font-size:12px;padding:6px 12px;">
+            📄 Download PDF
+          </button>
+          <button class="modal-close" onclick="document.getElementById('query-modal').classList.add('hidden')">✕</button>
+        </div>
+      </div>
       <div id="modal-content"></div>
+      <!-- Comments Section -->
+      <div id="comments-section" class="hidden">
+        <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
+          <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text-secondary);">💬 Comments & Follow-ups</h4>
+          <div id="comments-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;max-height:200px;overflow-y:auto;"></div>
+          <form onsubmit="addComment(event)" style="display:flex;gap:8px;">
+            <input type="text" id="comment-input" placeholder="Add a comment or follow-up..." maxlength="500"
+              style="flex:1;background:var(--navy-900);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:9px 12px;outline:none;font-size:13px;" />
+            <button type="submit" class="btn-primary" style="padding:9px 16px;font-size:13px;">Send</button>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 

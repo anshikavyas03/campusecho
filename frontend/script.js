@@ -214,6 +214,7 @@ function logout(silent = false) {
   localStorage.removeItem('campusecho_token');
   localStorage.removeItem('campusecho_user');
   currentUser = null;
+  document.body.classList.remove('is-admin');
 
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('dashboard').classList.add('hidden');
@@ -246,14 +247,23 @@ function initDashboard(user) {
   document.getElementById('topbar-username').textContent = `Hello, ${user.name.split(' ')[0]}!`;
   document.getElementById('section-subtitle').textContent = `${user.department || 'Campus'} | ${user.email}`;
 
-  // Show admin nav if admin
   if (user.role === 'admin') {
+    // Admin: show Admin Panel nav, hide student-only nav items
+    document.body.classList.add('is-admin');
     document.getElementById('admin-nav-item').style.display = 'flex';
-  }
+    document.getElementById('student-submit-nav').style.display = 'none';
+    document.getElementById('student-queries-nav').style.display = 'none';
+    document.getElementById('student-profile-nav').style.display = 'none';
 
-  // Load data
-  fetchQueries();
-  showSection('overview', document.querySelector('.nav-item'));
+    // Admin lands on Admin Panel directly
+    fetchAdminQueries();
+    showSection('admin', document.getElementById('admin-nav-item'));
+  } else {
+    // Student: load queries and land on overview
+    document.body.classList.remove('is-admin');
+    fetchQueries();
+    showSection('overview', document.querySelector('.nav-item'));
+  }
 }
 
 // ========================

@@ -157,15 +157,15 @@
           <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
           <span>Overview</span>
         </a>
-        <a href="#" class="nav-item" onclick="showSection('submit', this)">
+        <a href="#" class="nav-item" id="student-submit-nav" onclick="showSection('submit', this)">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
           <span>New Query</span>
         </a>
-        <a href="#" class="nav-item" onclick="showSection('myqueries', this)">
+        <a href="#" class="nav-item" id="student-queries-nav" onclick="showSection('myqueries', this)">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
           <span>My Queries</span>
         </a>
-        <a href="#" class="nav-item" onclick="showSection('profile', this)">
+        <a href="#" class="nav-item" id="student-profile-nav" onclick="showSection('profile', this)">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
           <span>My Profile</span>
         </a>
@@ -260,11 +260,11 @@
           <div class="overview-card quick-actions">
             <div class="card-header"><h3>Quick Actions</h3></div>
             <div class="action-grid">
-              <button class="action-btn" onclick="showSection('submit', document.querySelector('[onclick*=submit]'))">
+              <button class="action-btn student-only" onclick="showSection('submit', document.getElementById('student-submit-nav'))">
                 <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
                 New Query
               </button>
-              <button class="action-btn" onclick="showSection('myqueries', document.querySelector('[onclick*=myqueries]'))">
+              <button class="action-btn student-only" onclick="showSection('myqueries', document.getElementById('student-queries-nav'))">
                 <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg>
                 Track Status
               </button>

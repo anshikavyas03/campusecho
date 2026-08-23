@@ -1,230 +1,127 @@
-# 🎓 CampusEcho — Smart Campus Query Management System
+# CampusEcho - Smart Campus Query Management System
 
-A full-stack web application for managing campus queries with JWT authentication.
+CampusEcho is a full-stack web application for managing campus service queries. It provides role-based student and administrator workflows, secure authentication, query lifecycle management, and a responsive single-page interface.
 
----
+## Highlights
 
-## 🏗 Tech Stack
+- JWT-based authentication with bcrypt password hashing
+- Role-based access control for student and administrator workflows
+- Protected REST API endpoints for registration, login, profile management, and query handling
+- Query creation, filtering, status tracking, priority management, and administrator responses
+- MongoDB data modeling with Mongoose
+- Responsive frontend built with HTML, CSS, and vanilla JavaScript
 
-| Layer      | Technology                          |
-|------------|-------------------------------------|
-| Frontend   | HTML5, CSS3, Vanilla JavaScript     |
-| Backend    | Node.js + Express.js                |
-| Database   | MongoDB + Mongoose                  |
-| Auth       | JWT (jsonwebtoken) + bcryptjs       |
+## Architecture
 
----
-
-## 📁 Project Structure
-
+```text
+Single-page frontend
+        |
+        v
+Express REST API
+  |-- Authentication and JWT middleware
+  |-- Query and admin routes
+        |
+        v
+MongoDB / Mongoose
 ```
+
+## Tech Stack
+
+| Area | Technology |
+| --- | --- |
+| Frontend | HTML5, CSS3, vanilla JavaScript |
+| Backend | Node.js, Express.js |
+| Database | MongoDB, Mongoose |
+| Authentication | JSON Web Tokens, bcryptjs |
+| Developer tooling | nodemon |
+
+## Project Structure
+
+```text
 campusecho/
 ├── backend/
-│   ├── server.js              # Express app entry point
+│   ├── server.js              # Express server and API entry point
 │   ├── package.json
-│   ├── models/
-│   │   ├── User.js            # User schema (name, email, password[hashed], role)
-│   │   └── Query.js           # Query schema (title, description, category, status...)
 │   ├── middleware/
-│   │   └── auth.js            # JWT verification middleware
+│   │   └── auth.js            # JWT and administrator authorization middleware
+│   ├── models/
+│   │   ├── User.js
+│   │   └── Query.js
 │   └── routes/
-│       ├── auth.js            # POST /register, POST /login, GET /me
-│       └── query.js           # CRUD for queries + admin routes
-└── frontend/
-    ├── index.html             # Single-page application
-    ├── style.css              # Full design system
-    └── script.js             # All JS logic (auth, queries, UI)
+│       ├── auth.js            # Registration, login, and profile routes
+│       └── query.js           # Query and administrator routes
+├── frontend/
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+└── .gitignore
 ```
 
----
+## Run Locally
 
-## 🚀 Setup & Installation
+### 1. Install prerequisites
 
-### Prerequisites
-- Node.js v18+
-- MongoDB (local or [MongoDB Atlas](https://cloud.mongodb.com) free tier)
+- Node.js 18+
+- MongoDB locally, or a MongoDB Atlas connection string
 
-### Step 1: Install Dependencies
+### 2. Install dependencies
+
 ```bash
-cd campusecho/backend
+cd backend
 npm install
 ```
 
-### Step 2: Configure Environment (Optional)
-Create a `.env` file in `/backend`:
+### 3. Configure environment variables
+
+Copy the example file and replace the placeholder values:
+
+```bash
+cp .env.example .env
+```
+
+Required variables:
+
 ```env
-PORT=5000
+PORT=5002
 MONGO_URI=mongodb://localhost:27017/campusecho
-JWT_SECRET=your_custom_secret_key_here
+JWT_SECRET=replace_with_a_long_random_secret
+ADMIN_SECRET=replace_with_a_separate_admin_secret
 ```
 
-### Step 3: Start MongoDB
-```bash
-# Local MongoDB
-mongod
+Never commit `.env` files or real secrets.
 
-# OR use MongoDB Atlas — paste your connection string in MONGO_URI
-```
+### 4. Start the application
 
-### Step 4: Start the Server
 ```bash
-# Development (auto-reload)
 npm run dev
-
-# Production
-npm start
 ```
 
-### Step 5: Open the App
-Visit: **http://localhost:5000**
+Open [http://localhost:5002](http://localhost:5002).
 
----
+## API Overview
 
-## 🔐 JWT Authentication Flow
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/api/auth/register` | Create a student or administrator account |
+| POST | `/api/auth/login` | Authenticate and receive a JWT |
+| GET | `/api/auth/me` | Retrieve the signed-in user profile |
+| POST | `/api/queries` | Submit a query |
+| GET | `/api/queries` | View and filter a user's queries |
+| PUT | `/api/queries/:id` | Update a query |
+| DELETE | `/api/queries/:id` | Delete a query |
+| GET | `/api/admin/queries` | View all queries as an administrator |
 
-```
-┌──────────┐        POST /register or /login         ┌──────────────┐
-│  Client  │ ──────────────────────────────────────► │    Server    │
-│          │                                          │              │
-│          │ ◄── { token: "eyJhbG..." } ─────────── │  jwt.sign()  │
-│          │                                          └──────────────┘
-│  Store   │
-│  token   │        GET /queries                      ┌──────────────┐
-│  in      │ ──── Authorization: Bearer eyJhbG... ──► │ authMiddleware│
-│  local   │                                          │ jwt.verify() │
-│  Storage │ ◄───────── { queries: [...] } ─────────  │              │
-└──────────┘                                          └──────────────┘
-```
+## Security Notes
 
-**Token Payload:**
-```json
-{
-  "userId": "64a2b3...",
-  "role": "student",
-  "iat": 1700000000,
-  "exp": 1700086400
-}
-```
+- Passwords are hashed before storage.
+- JWT secrets and administrator-registration codes must be supplied through environment variables.
+- Protected routes require a valid Bearer token.
+- Administrative endpoints require an authenticated administrator account.
 
----
+## Portfolio Notes
 
-## 📡 API Reference
+CampusEcho demonstrates REST API design, authentication and authorization, database modeling, middleware architecture, and frontend-backend integration.
 
-### Auth Routes
+## Author
 
-| Method | Endpoint             | Body                              | Description        |
-|--------|----------------------|-----------------------------------|--------------------|
-| POST   | `/api/auth/register` | `{name, email, password, dept}`   | Create account     |
-| POST   | `/api/auth/login`    | `{email, password}`               | Login, get token   |
-| GET    | `/api/auth/me`       | *(token in header)*               | Get current user   |
-
-### Query Routes (All Protected — need JWT)
-
-| Method | Endpoint              | Body / Params            | Description             |
-|--------|-----------------------|--------------------------|-------------------------|
-| POST   | `/api/queries`        | `{title, desc, cat, pri}`| Submit new query        |
-| GET    | `/api/queries`        | `?status=&category=`     | Get my queries          |
-| GET    | `/api/queries/:id`    | —                        | Get single query        |
-| PUT    | `/api/queries/:id`    | `{status, adminResponse}`| Update query            |
-| DELETE | `/api/queries/:id`    | —                        | Delete query            |
-| GET    | `/api/admin/queries`  | `?status=&priority=`     | Admin: Get all queries  |
-
-### Sample Responses
-
-**POST /api/auth/login — Success:**
-```json
-{
-  "message": "Welcome back, Raj!",
-  "token": "eyJhbGciOiJIUzI1NiJ9...",
-  "user": {
-    "id": "64a2b3c4d5e6f7...",
-    "name": "Raj Kumar",
-    "email": "raj@campus.edu",
-    "role": "student",
-    "department": "Computer Science"
-  }
-}
-```
-
-**POST /api/queries — Success:**
-```json
-{
-  "message": "Query submitted successfully!",
-  "query": {
-    "_id": "64a2b3...",
-    "title": "Library books not available",
-    "category": "Library",
-    "priority": "High",
-    "status": "Pending",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
-}
-```
-
-**Error Response:**
-```json
-{
-  "error": "Invalid email or password."
-}
-```
-
----
-
-## 👥 User Roles
-
-| Role    | Capabilities                                      |
-|---------|--------------------------------------------------|
-| Student | Register, login, submit queries, view own queries |
-| Admin   | View ALL queries, update status, respond          |
-
-**Demo Admin Account:**
-- Email: `admin@campus.edu`
-- Password: `admin123`
-
-*(Any email containing "admin" gets admin role automatically — change this in production!)*
-
----
-
-## 🛡 Security Features
-
-- **Password Hashing**: bcrypt with 12 salt rounds
-- **JWT Tokens**: 24-hour expiry, signed with secret key
-- **Protected Routes**: All query routes require valid JWT
-- **Input Validation**: Both client-side and server-side
-- **Role-Based Access**: Admin routes blocked for regular users
-- **XSS Prevention**: Output escaping in frontend
-
----
-
-## 🎯 Query Categories & Statuses
-
-**Categories:** Academic, Hostel, Library, Fees & Finance, Transportation, Sports & Activities, IT & Technical, Other
-
-**Priority Levels:** Low → Medium → High → Urgent
-
-**Status Flow:** `Pending` → `In Progress` → `Resolved` / `Closed`
-
----
-
-## 🔮 Future Improvements
-
-- [ ] Email notifications (Nodemailer)
-- [ ] Real-time updates (Socket.io)
-- [ ] File attachments for queries
-- [ ] Analytics dashboard
-- [ ] Push notifications
-- [ ] Deployment (Railway / Render / Vercel)
-
----
-
-## 📝 Final Year Project Notes
-
-This project demonstrates:
-1. **RESTful API Design** with Express.js
-2. **JWT-based Stateless Authentication**
-3. **Password Security** with bcrypt hashing
-4. **NoSQL Database Design** with MongoDB/Mongoose
-5. **Single-Page Application** patterns in Vanilla JS
-6. **Middleware Architecture** in Node.js
-7. **Role-Based Access Control (RBAC)**
-8. **Responsive UI** without any frameworks
+[Anshika Vyas](https://github.com/anshikavyas03)

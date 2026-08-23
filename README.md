@@ -2,6 +2,10 @@
 
 CampusEcho is a full-stack web application for managing campus service queries. It provides role-based student and administrator workflows, secure authentication, query lifecycle management, and a responsive single-page interface.
 
+## Live Demo
+
+[Open CampusEcho](https://campusecho-w36x.onrender.com/)
+
 ## Highlights
 
 - JWT-based authentication with bcrypt password hashing

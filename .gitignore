@@ -24,6 +24,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Local archives
+*.zip
+
 # Test and build output
 coverage/
 dist/
